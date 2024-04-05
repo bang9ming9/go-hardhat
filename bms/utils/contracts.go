@@ -1,4 +1,4 @@
-package bsmutils
+package bmsutils
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi"

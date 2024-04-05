@@ -1,4 +1,4 @@
-package bsmutils
+package bmsutils
 
 import (
 	"fmt"

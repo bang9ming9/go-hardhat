@@ -1,4 +1,4 @@
-package bsm
+package bms
 
 import (
 	"os"

@@ -1,4 +1,4 @@
-package bsm
+package bms
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"testing"
 
-	bsmutils "github.com/bang9ming9/go-hardhat/bsm/utils"
+	bmsutils "github.com/bang9ming9/go-hardhat/bms/utils"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,7 +33,7 @@ func NewBacked(t *testing.T) *Backend {
 
 	backend := simulated.NewBackend(
 		core.GenesisAlloc{
-			owner.From: core.GenesisAccount{Balance: bsmutils.ToWei(common.Big256)},
+			owner.From: core.GenesisAccount{Balance: bmsutils.ToWei(common.Big256)},
 		},
 		simulated.WithBlockGasLimit(params.MaxGasLimit),
 		func(nodeConf *node.Config, ethConf *ethconfig.Config) {
@@ -74,9 +74,9 @@ func (ec *Backend) TransactionReceipt(ctx context.Context, txHash common.Hash) (
 
 func (ec *Backend) EstimateGas(ctx context.Context, call ethereum.CallMsg) (uint64, error) {
 	gas, err := ec.Client.EstimateGas(ctx, call)
-	return gas, bsmutils.ToRevert(err)
+	return gas, bmsutils.ToRevert(err)
 }
 
 func (ec *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return bsmutils.ToRevert(ec.Client.SendTransaction(ctx, tx))
+	return bmsutils.ToRevert(ec.Client.SendTransaction(ctx, tx))
 }

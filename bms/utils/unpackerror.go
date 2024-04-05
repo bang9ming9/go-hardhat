@@ -1,4 +1,4 @@
-package bsmutils
+package bmsutils
 
 import (
 	"fmt"
@@ -10,12 +10,8 @@ import (
 type Sig [4]byte
 
 var (
-	errorABIs map[Sig]abi.Error
+	errorABIs map[Sig]abi.Error = make(map[Sig]abi.Error)
 )
-
-func ClearErrors() {
-	errorABIs = make(map[Sig]abi.Error)
-}
 
 func EnrollErrors(aBIs ...*abi.ABI) {
 	for _, aBI := range aBIs {
@@ -33,12 +29,12 @@ type revertError interface {
 }
 
 type RevertError struct {
-	name string
+	err  abi.Error
 	args interface{}
 }
 
 func (err *RevertError) Error() string {
-	return fmt.Sprintf("%s%v", err.name, err.args)
+	return fmt.Sprintf("%s%v", err.err.Name, err.args)
 }
 
 func ToRevert(input error) error {
@@ -71,5 +67,5 @@ func ToRevert(input error) error {
 		return input
 	}
 
-	return &RevertError{aBI.Name, args}
+	return &RevertError{aBI, args}
 }
