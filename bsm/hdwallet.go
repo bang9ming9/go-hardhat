@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	mnemonicFile string = filepath.Join(os.Getenv("HOME"), ".bm-mnemonic")
+	mnemonicFile string = filepath.Join(os.Getenv("HOME"), ".bms-mnemonic")
 	wallet       *hdwallet.Wallet
 	eoaCount     uint32 = 0
 )

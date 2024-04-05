@@ -3,7 +3,7 @@ module github.com/bang9ming9/go-hardhat
 go 1.22.1
 
 require (
-	github.com/ethereum/go-ethereum v1.13.14
+	github.com/ethereum/go-ethereum v1.13.12
 	github.com/fabelx/go-solc-select v0.2.0
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.2
 	github.com/pkg/errors v0.9.1

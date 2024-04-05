@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bang9ming9/go-hardhat/bsm/utils"
+	bsmutils "github.com/bang9ming9/go-hardhat/bsm/utils"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,19 +33,19 @@ func NewBacked(t *testing.T) *Backend {
 
 	backend := simulated.NewBackend(
 		core.GenesisAlloc{
-			owner.From: core.GenesisAccount{Balance: utils.ToWei(common.Big256)},
+			owner.From: core.GenesisAccount{Balance: bsmutils.ToWei(common.Big256)},
 		},
 		simulated.WithBlockGasLimit(params.MaxGasLimit),
 		func(nodeConf *node.Config, ethConf *ethconfig.Config) {
 			ethConf.Genesis.Coinbase = owner.From
 			ethConf.Genesis.BaseFee = common.Big0
+			ethConf.Miner.GasPrice = common.Big0
+			ethConf.TxPool.PriceLimit = 0
+
 			// @dev ethconfig.Defaults.Miner.GasPrice = common.Big0 을 통해서 완전한 공짜 블록체인이 완성되었다.
 			// @dev ethconfig.Defaults.Miner.GasPrice 를 또 어디서 이용하는지 확인해봐야 겠다.
 			// @dev ethereum@1.13.11 에서는 해당 내용은 필요 없었다.
 			ethconfig.Defaults.Miner.GasPrice = common.Big0
-			ethConf.Miner.GasPrice = common.Big0
-
-			ethConf.TxPool.PriceLimit = 0
 		},
 	)
 
@@ -74,9 +74,9 @@ func (ec *Backend) TransactionReceipt(ctx context.Context, txHash common.Hash) (
 
 func (ec *Backend) EstimateGas(ctx context.Context, call ethereum.CallMsg) (uint64, error) {
 	gas, err := ec.Client.EstimateGas(ctx, call)
-	return gas, ToRevert(err)
+	return gas, bsmutils.ToRevert(err)
 }
 
 func (ec *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return ToRevert(ec.Client.SendTransaction(ctx, tx))
+	return bsmutils.ToRevert(ec.Client.SendTransaction(ctx, tx))
 }

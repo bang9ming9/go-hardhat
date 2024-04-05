@@ -1,11 +1,10 @@
-package bsm
+package bsmutils
 
 import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 )
 
 type Sig [4]byte
@@ -31,6 +30,15 @@ func EnrollErrors(aBIs ...*abi.ABI) {
 
 type revertError interface {
 	ErrorData() interface{}
+}
+
+type RevertError struct {
+	name string
+	args interface{}
+}
+
+func (err *RevertError) Error() string {
+	return fmt.Sprintf("%s%v", err.name, err.args)
 }
 
 func ToRevert(input error) error {
@@ -60,8 +68,8 @@ func ToRevert(input error) error {
 
 	args, err := aBI.Unpack(data)
 	if err != nil {
-		return errors.Wrap(errors.Wrap(err, "aBI.Unpack"), input.Error())
+		return input
 	}
 
-	return fmt.Errorf("%s: %v", aBI.Sig, args)
+	return &RevertError{aBI.Name, args}
 }
