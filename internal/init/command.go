@@ -46,6 +46,7 @@ func command(cCtx *cli.Context) error {
 		return err
 	}
 
+	// prettier, prettier-plugin-solidity 설치 및 .prettierrc 파일 생성
 	if err := doNPMDependency(); err != nil {
 		return err
 	}

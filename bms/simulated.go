@@ -29,8 +29,12 @@ type Backend struct {
 }
 
 func NewBacked(t *testing.T) *Backend {
-	owner := GetOwner(t)
+	minerGasPrice := new(big.Int).SetBytes(ethconfig.Defaults.Miner.GasPrice.Bytes())
+	ethconfig.Defaults.Miner.GasPrice.SetBytes([]byte{})
+	defer ethconfig.Defaults.Miner.GasPrice.SetBytes(minerGasPrice.Bytes())
 
+	owner := GetOwner(t)
+	ethconfig.Defaults.Miner.GasPrice = common.Big0
 	backend := simulated.NewBackend(
 		core.GenesisAlloc{
 			owner.From: core.GenesisAccount{Balance: bmsutils.ToWei(common.Big256)},
@@ -39,13 +43,7 @@ func NewBacked(t *testing.T) *Backend {
 		func(nodeConf *node.Config, ethConf *ethconfig.Config) {
 			ethConf.Genesis.Coinbase = owner.From
 			ethConf.Genesis.BaseFee = common.Big0
-			ethConf.Miner.GasPrice = common.Big0
 			ethConf.TxPool.PriceLimit = 0
-
-			// @dev ethconfig.Defaults.Miner.GasPrice = common.Big0 을 통해서 완전한 공짜 블록체인이 완성되었다.
-			// @dev ethconfig.Defaults.Miner.GasPrice 를 또 어디서 이용하는지 확인해봐야 겠다.
-			// @dev ethereum@1.13.11 에서는 해당 내용은 필요 없었다.
-			ethconfig.Defaults.Miner.GasPrice = common.Big0
 		},
 	)
 

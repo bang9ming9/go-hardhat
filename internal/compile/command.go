@@ -70,6 +70,7 @@ func command(ctx *cli.Context) error {
 			config.Set(utils.SOLC_REMAPPINGS, remappings)
 		}
 	}
+	// 1-2. 컴파일한 파일을 임시로 저장할 디렉토리를 만든다. (command 종료와 동시에 제거)
 	if err := os.MkdirAll(utils.GetABIsCompiledDir(), 0755); err != nil {
 		return errors.Wrap(err, "os.MkdirAll")
 	}
@@ -100,7 +101,6 @@ func compile(version string, remappings []string) ([]string, error) {
 	args := append([]string{"--optimize", "--combined-json", "bin,abi"}, remappings...)
 
 	dirpath := utils.GetContractDir()
-
 	files, err := findAllSolidityFiles(dirpath)
 	if err != nil {
 		return nil, errors.Wrap(err, "findAllSolidityFiles")
