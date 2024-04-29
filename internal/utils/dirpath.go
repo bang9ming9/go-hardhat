@@ -11,13 +11,12 @@ import (
 )
 
 var (
-	rootpath     string = ""
-	config       string = ""
-	contract     string = ""
-	test         string = ""
-	nodemudules  string = ""
-	abis         string = ""
-	abisCompiled string = ""
+	rootpath    string = ""
+	config      string = ""
+	contract    string = ""
+	test        string = ""
+	nodemudules string = ""
+	abis        string = ""
 )
 
 func GetRootPath() (string, error) {
@@ -53,7 +52,6 @@ func SetDirPath() error {
 	test = filepath.Join(rootpath, "test")
 	nodemudules = filepath.Join(rootpath, "node_modules")
 	abis = filepath.Join(rootpath, "abis")
-	abisCompiled = filepath.Join(abis, "compiled")
 	return nil
 }
 
@@ -75,10 +73,6 @@ func GetNodeModulesDir() string {
 
 func GetABIsDir() string {
 	return abis
-}
-
-func GetABIsCompiledDir() string {
-	return abisCompiled
 }
 
 func ReadConfig() (*viper.Viper, error) {
