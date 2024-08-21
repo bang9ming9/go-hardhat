@@ -15,43 +15,32 @@ import (
 )
 
 var Command *cli.Command = &cli.Command{
-	Name:   "init",
-	Action: command,
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name: "modulepath",
-		},
-	},
-}
-
-func command(cCtx *cli.Context) error {
-	rootpath, err := utils.GetRootPath()
-	if err != nil {
-		return err
-	}
-
-	// go.mod 이 없다면 생성 한다.
-	if rootpath == "" {
-		if err := initGoModule(cCtx.String("modulepath")); err != nil {
+	Name: "init",
+	Action: func(ctx *cli.Context) error {
+		rootpath, err := utils.GetRootPath()
+		if err != nil {
 			return err
 		}
-	}
 
-	if err := utils.SetDirPath(); err != nil {
-		return errors.Wrap(err, "utils.SetDirPath")
-	}
+		// go.mod 이 없다면 생성 한다.
+		if rootpath == "" {
+			if err := initGoModule(ctx.Args().First()); err != nil {
+				return err
+			}
+		}
 
-	// 기본 디렉토리, 파일을 생성한다.
-	if err := makeDefaultFS(); err != nil {
-		return err
-	}
+		if err := utils.SetDirPath(); err != nil {
+			return errors.Wrap(err, "utils.SetDirPath")
+		}
 
-	// prettier, prettier-plugin-solidity 설치 및 .prettierrc 파일 생성
-	if err := doNPMDependency(); err != nil {
-		return err
-	}
+		// 기본 디렉토리, 파일을 생성한다.
+		if err := makeDefaultFS(); err != nil {
+			return err
+		}
 
-	return nil
+		return nil
+	},
+	ArgsUsage: "<module-path>",
 }
 
 func initGoModule(modulepath string) error {
@@ -75,20 +64,6 @@ func initGoModule(modulepath string) error {
 }
 
 func makeDefaultFS() error {
-	configDir := utils.GetConfigtDir()
-	if _, err := os.Stat(configDir); errors.Is(err, os.ErrNotExist) {
-		if err := os.Mkdir(configDir, 0755); err != nil {
-			return errors.Wrap(err, configDir)
-		}
-	}
-
-	configFile := filepath.Join(configDir, "config.toml")
-	if _, err := os.Stat(configFile); errors.Is(err, os.ErrNotExist) {
-		if err := os.WriteFile(configFile, []byte{}, 0644); err != nil {
-			return errors.Wrap(err, configFile)
-		}
-	}
-
 	contractsDir := utils.GetContractDir()
 	if _, err := os.Stat(contractsDir); errors.Is(err, os.ErrNotExist) {
 		if err := os.Mkdir(contractsDir, 0755); err != nil {
@@ -103,21 +78,14 @@ func makeDefaultFS() error {
 		}
 	}
 
-	return nil
-}
+	remapping := utils.GetRemappingsFilePath()
+	if _, err := os.Stat(remapping); errors.Is(err, os.ErrNotExist) {
+		if err := os.WriteFile(remapping, []byte{}, 0644); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("create %s", remapping))
+		}
+	}
 
-func doNPMDependency() error {
-	rootpath, err := utils.GetRootPath()
-	if err != nil {
-		return err
-	}
-	if err := exec.Command("cd", rootpath).Run(); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("cd %s", rootpath))
-	}
-	if err := exec.Command("npm", "install", "--save-dev", "prettier", "prettier-plugin-solidity").Run(); err != nil {
-		return errors.Wrap(err, "npm install prettier")
-	}
-	prettierrc := filepath.Join(rootpath, ".prettierrc")
+	prettierrc := filepath.Join(contractsDir, ".prettierrc")
 	if _, err := os.Stat(prettierrc); errors.Is(err, os.ErrNotExist) {
 		if err := os.WriteFile(prettierrc, []byte(`
 {
@@ -134,8 +102,7 @@ func doNPMDependency() error {
 		}
 		}
 	]
-}
-		`), 0644); err != nil {
+}`), 0644); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("create %s", prettierrc))
 		}
 	}

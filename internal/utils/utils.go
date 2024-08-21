@@ -1,23 +1,19 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
+	"os/exec"
 	"regexp"
 
 	"github.com/fabelx/go-solc-select/pkg/installer"
 	"github.com/fabelx/go-solc-select/pkg/versions"
+	"github.com/pkg/errors"
 )
 
-func VerifySolidityVersion(version string) error {
-	reg := regexp.MustCompile(`^\d+(\.\d+){2}$`)
-	if !reg.MatchString(version) {
-		return fmt.Errorf("%s is invalid solidity version", version)
-	}
-	return nil
-}
-
 func InstallSolc(version string) error {
-	if err := VerifySolidityVersion(version); err != nil {
+	var err error
+	if version, err = ToSolcVersion(version); err != nil {
 		return err
 	}
 
@@ -27,4 +23,23 @@ func InstallSolc(version string) error {
 	}
 
 	return installer.InstallSolc(version)
+}
+
+func ToSolcVersion(version string) (string, error) {
+	if version == "" {
+		cmd := exec.Command("solc", "--version")
+		var stderr, stdout bytes.Buffer
+		cmd.Stderr, cmd.Stdout = &stderr, &stdout
+
+		if err := cmd.Run(); err != nil {
+			return "", errors.Wrap(err, stderr.String())
+		}
+		version = stdout.String()
+	}
+	reg := regexp.MustCompile(`\d+\.\d+\.\d+`)
+	match := reg.FindString(version)
+	if match == "" {
+		return "", fmt.Errorf("%s is invalid solidity version", version)
+	}
+	return match, nil
 }

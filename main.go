@@ -6,7 +6,6 @@ import (
 
 	"github.com/bang9ming9/go-hardhat/internal/compile"
 	initCommand "github.com/bang9ming9/go-hardhat/internal/init"
-	"github.com/bang9ming9/go-hardhat/internal/solidity"
 	"github.com/urfave/cli/v2"
 )
 
@@ -29,7 +28,6 @@ func init() {
 	app.Commands = append(app.Commands, []*cli.Command{
 		initCommand.Command,
 		compile.Command,
-		solidity.Command,
 	}...)
 }
 

@@ -7,16 +7,14 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 )
 
 var (
-	rootpath    string = ""
-	config      string = ""
-	contract    string = ""
-	test        string = ""
-	nodemudules string = ""
-	abis        string = ""
+	rootpath       string = ""
+	contract       string = ""
+	test           string = ""
+	abis           string = ""
+	remappingspath string = ""
 )
 
 func GetRootPath() (string, error) {
@@ -47,16 +45,11 @@ func SetDirPath() error {
 	if _, err := os.Stat(rootpath); err != nil {
 		return errors.Wrap(err, "os.Stat")
 	}
-	config = filepath.Join(rootpath, ".config")
 	contract = filepath.Join(rootpath, "contracts")
 	test = filepath.Join(rootpath, "test")
-	nodemudules = filepath.Join(rootpath, "node_modules")
 	abis = filepath.Join(rootpath, "abis")
+	remappingspath = filepath.Join(contract, "remappings.txt")
 	return nil
-}
-
-func GetConfigtDir() string {
-	return config
 }
 
 func GetContractDir() string {
@@ -67,21 +60,23 @@ func GetTestDir() string {
 	return test
 }
 
-func GetNodeModulesDir() string {
-	return nodemudules
-}
-
 func GetABIsDir() string {
 	return abis
 }
 
-func ReadConfig() (*viper.Viper, error) {
-	if err := SetDirPath(); err != nil {
-		return nil, err
+func GetRemappingsFilePath() string {
+	return remappingspath
+}
+
+func ReadRemappings() []string {
+	if remappingspath == "" {
+		return nil
 	}
-	v := viper.New()
-	v.SetConfigType("toml")
-	v.SetConfigName("config.toml")
-	v.AddConfigPath(GetConfigtDir())
-	return v, v.ReadInConfig()
+
+	bytes, err := os.ReadFile(remappingspath)
+	if err != nil {
+		return nil
+	}
+
+	return strings.Split(string(bytes), "\n")
 }

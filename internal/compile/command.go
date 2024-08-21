@@ -11,15 +11,14 @@ import (
 
 	"github.com/bang9ming9/go-hardhat/internal/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/console/prompt"
 	solconfig "github.com/fabelx/go-solc-select/pkg/config"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
 var Command *cli.Command = &cli.Command{
-	Name:   "compile",
-	Action: command,
+	Name:      "compile",
+	ArgsUsage: "<solc-version>",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "tidy",
@@ -30,109 +29,81 @@ var Command *cli.Command = &cli.Command{
 			Value: false,
 			Usage: "write all bind codes to abis/bind.go",
 		}, &cli.StringFlag{
-			Name:  "exc",
-			Usage: "Comma separated types to exclude from binding",
+			Name:    "exclude",
+			Aliases: []string{"e", "exc"},
+			Usage:   "Comma separated path to exclude from compile",
 		}, &cli.StringFlag{
-			Name:  "filter",
-			Usage: "Comma separated types to filter from binding",
+			Name:    "filter",
+			Aliases: []string{"f"},
+			Usage:   "Comma separated types to filter from binding",
 		},
 	},
-}
+	Action: func(ctx *cli.Context) error {
+		if err := utils.SetDirPath(); err != nil {
+			return nil
+		}
 
-func command(ctx *cli.Context) error {
-	config, err := utils.ReadConfig()
-	if err != nil {
-		return errors.Wrap(err, "utils.ReadConfig")
-	}
-	defer config.WriteConfig()
-	// solc 확인 및 다운
-	var version string = ""
-	if config.IsSet(utils.SOLC_VERSION) {
-		version = config.GetString(utils.SOLC_VERSION)
-	} else {
-		if input, err := prompt.Stdin.PromptInput("solidity version: "); err != nil {
-			return err
+		// 1. solc 버전 확인 및 설치
+		version, err := utils.ToSolcVersion(ctx.Args().First())
+		if err != nil {
+			return errors.Wrap(err, "utils.ToSolcVersion")
+		}
+		if err := utils.InstallSolc(version); err != nil {
+			return errors.Wrap(err, "utils.InstallSolc")
+		}
+
+		// 2. solidity 컴파일 실행
+		// 2-1 컴파일 할 파일 목록 가져오기
+		files, err := findSolFiles(utils.GetContractDir(), strings.Split(ctx.String("exclude"), ","))
+		if err != nil {
+			return errors.Wrap(err, "findSolFiles")
+		}
+
+		// 2-2. compile 실행 (solc-0.0.0 --optimize --combined-json abi,bin contracts/*.sol)
+		contracts, err := compile(version, utils.ReadRemappings(), files)
+		if err != nil {
+			return errors.Wrap(err, "compile")
+		}
+
+		// 3. filter 적용
+		if ctx.IsSet("filter") {
+			filters := make(map[string]struct{})
+			for _, f := range strings.Split(ctx.String("filter"), ",") {
+				filters[f] = struct{}{}
+			}
+			for name := range contracts {
+				if _, ok := filters[name]; !ok {
+					delete(contracts, name)
+				}
+			}
+		}
+
+		// 4. abigen 실행
+		abisDir := utils.GetABIsDir()
+		if _, err := os.Stat(abisDir); errors.Is(err, os.ErrNotExist) {
+			if err := os.Mkdir(abisDir, 0755); err != nil {
+				return errors.Wrap(err, abisDir)
+			}
+		}
+
+		if ctx.Bool("merge") {
+			if err := abigenMerge(contracts); err != nil {
+				return errors.Wrap(err, "abigenMerge")
+			}
 		} else {
-			version = input
-		}
-	}
-	if err := utils.InstallSolc(version); err != nil {
-		return errors.Wrap(err, "utils.InstallSolc")
-	}
-	config.Set(utils.SOLC_VERSION, version)
-
-	// compile 실행
-	// 1. remappings 셋팅
-	var remappings []string
-	if config.IsSet(utils.SOLC_REMAPPINGS) {
-		remappings = config.GetStringSlice(utils.SOLC_REMAPPINGS)
-	}
-	// 1-1. remappings openzeppelin
-	ozPath := filepath.Join(utils.GetNodeModulesDir(), "@openzeppelin")
-	if _, err := os.Stat(ozPath); err == nil {
-		var ok = false
-		for _, line := range remappings {
-			if strings.HasPrefix(line, "@openzeppelin") {
-				ok = true
-				break
+			for name, compiled := range contracts {
+				if err := abigen(name, compiled); err != nil {
+					return errors.Wrap(err, name)
+				}
 			}
 		}
-		if !ok {
-			remappings = append(remappings, fmt.Sprintf("@openzeppelin/=%s/", ozPath))
-			config.Set(utils.SOLC_REMAPPINGS, remappings)
-		}
-	}
 
-	// 2. solc-0.0.0 --optimize --combined-json abi,bin contracts/*.sol
-	contracts, err := compile(version, remappings)
-	if err != nil {
-		return errors.Wrap(err, "compile")
-	}
-
-	// 3. filter, exclude 적용
-	if ctx.IsSet("filter") && ctx.IsSet("exc") {
-		return errors.New("Flags 'filter' and 'exc' can't be used at the same time")
-	} else if ctx.IsSet("filter") {
-		filters := make(map[string]struct{})
-		for _, f := range strings.Split(ctx.String("filter"), ",") {
-			filters[f] = struct{}{}
+		if ctx.Bool("tidy") {
+			return exec.Command("go", "mod", "tidy").Run()
+		} else {
+			return nil
 		}
-		for name := range contracts {
-			if _, ok := filters[name]; !ok {
-				delete(contracts, name)
-			}
-		}
-	} else if ctx.IsSet("exc") {
-		for _, exc := range strings.Split(ctx.String("exc"), ",") {
-			delete(contracts, exc)
-		}
-	}
-
-	// 4. abigen 실행
-	abisDir := utils.GetABIsDir()
-	if _, err := os.Stat(abisDir); errors.Is(err, os.ErrNotExist) {
-		if err := os.Mkdir(abisDir, 0755); err != nil {
-			return errors.Wrap(err, abisDir)
-		}
-	}
-
-	if ctx.Bool("merge") {
-		if err := abigenMerge(contracts); err != nil {
-			return errors.Wrap(err, "abigenMerge")
-		}
-	} else {
-		for name, compiled := range contracts {
-			if err := abigen(name, compiled); err != nil {
-				return errors.Wrap(err, name)
-			}
-		}
-	}
-
-	if ctx.Bool("tidy") {
-		return exec.Command("go", "mod", "tidy").Run()
-	} else {
-		return nil
-	}
+	},
 }
 
 type compiled struct {
@@ -140,17 +111,11 @@ type compiled struct {
 	BIN string `json:"bin"`
 }
 
-func compile(version string, remappings []string) (map[string]compiled, error) {
+func compile(version string, remappings []string, files []string) (map[string]compiled, error) {
 	// ~/.gsolc-select/artifacts/solc-a.b.c/solc-a.b.c
 	cmdName := filepath.Join(solconfig.SolcArtifacts, fmt.Sprintf("solc-%s", version), fmt.Sprintf("solc-%s", version))
 	args := append([]string{"--optimize", "--combined-json", "bin,abi"}, remappings...)
 	args = append(args, "--")
-
-	dirpath := utils.GetContractDir()
-	files, err := findAllSolidityFiles(dirpath)
-	if err != nil {
-		return nil, errors.Wrap(err, "findAllSolidityFiles")
-	}
 
 	cmd := exec.Command(cmdName, append(args, files...)...)
 	var stderr, stdout bytes.Buffer
@@ -174,31 +139,26 @@ func compile(version string, remappings []string) (map[string]compiled, error) {
 
 	for pathname, value := range output.Contracts {
 		s := strings.Split(pathname, ":")
-		path, err := filepath.Abs(s[0])
-		if err != nil {
-			return nil, err
+
+		contract := s[1]
+		if _, ok := contracts[contract]; ok {
+			return nil, fmt.Errorf("%s is duplicated", contract)
 		}
-		if strings.HasPrefix(path, dirpath) {
-			contract := s[1]
-			if _, ok := contracts[contract]; ok {
-				return nil, fmt.Errorf("%s is duplicated", contract)
+		if value.BIN != "" { // interface
+			abiString, ok := value.ABI.(string)
+			if !ok {
+				abibytes, err := json.Marshal(value.ABI)
+				if err != nil {
+					return nil, errors.Wrap(err, "marshal abi")
+				}
+				abiString = string(abibytes)
 			}
-			if value.BIN != "" { // interface
-				abiString, ok := value.ABI.(string)
-				if !ok {
-					abibytes, err := json.Marshal(value.ABI)
-					if err != nil {
-						return nil, errors.Wrap(err, "marshal abi")
-					}
-					abiString = string(abibytes)
-				}
-				if abiString == "[]" { // abstract contract, or library
-					continue
-				}
-				contracts[contract] = compiled{
-					ABI: abiString,
-					BIN: "0x" + value.BIN,
-				}
+			if abiString == "[]" { // abstract contract, or library
+				continue
+			}
+			contracts[contract] = compiled{
+				ABI: abiString,
+				BIN: "0x" + value.BIN,
 			}
 		}
 	}
@@ -206,24 +166,16 @@ func compile(version string, remappings []string) (map[string]compiled, error) {
 	return contracts, nil
 }
 
-func findAllSolidityFiles(rootDir string) ([]string, error) {
+func findSolFiles(rootDir string, excludes []string) ([]string, error) {
 	var solFiles []string
 
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			dir := info.Name()
-			if len(dir) > len(rootDir) && strings.HasPrefix(dir, rootDir) {
-				if inDir, err := findAllSolidityFiles(info.Name()); err != nil {
-					return err
-				} else if inDir != nil {
-					solFiles = append(solFiles, inDir...)
+		if filepath.Ext(path) == ".sol" {
+			for _, exc := range excludes {
+				if strings.HasPrefix(path, exc) {
+					return nil
 				}
 			}
-		} else if strings.HasSuffix(info.Name(), ".sol") {
 			solFiles = append(solFiles, path)
 		}
 		return nil
