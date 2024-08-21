@@ -53,13 +53,23 @@ var Command *cli.Command = &cli.Command{
 		}
 
 		// 2. solidity 컴파일 실행
-		// 2-1 컴파일 할 파일 목록 가져오기
-		files, err := findSolFiles(utils.GetContractDir(), strings.Split(ctx.String("exclude"), ","))
+		// 2-1. 컴파일 제외할 디렉토리 확인
+		excludes := make([]string, 0)
+		for _, path := range strings.Split(ctx.String("exclude"), ",") {
+			if filepath.IsAbs(path) {
+				excludes = append(excludes, path)
+			} else if abs, err := filepath.Abs(path); err != nil {
+				return errors.Wrap(err, fmt.Sprintf("%s is invalid filepath", path))
+			} else {
+				excludes = append(excludes, abs)
+			}
+		}
+		// 2-2 컴파일 할 파일 목록 가져오기
+		files, err := findSolFiles(utils.GetContractDir(), excludes)
 		if err != nil {
 			return errors.Wrap(err, "findSolFiles")
 		}
-
-		// 2-2. compile 실행 (solc-0.0.0 --optimize --combined-json abi,bin contracts/*.sol)
+		// 2-3. compile 실행 (solc-0.0.0 --optimize --combined-json abi,bin contracts/*.sol)
 		contracts, err := compile(version, utils.ReadRemappings(), files)
 		if err != nil {
 			return errors.Wrap(err, "compile")

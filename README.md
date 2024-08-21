@@ -1,11 +1,13 @@
-go build -o ~/usr/local/bin/bms . (bang9ming9solidity)
+### build
+```bash
+go build -o /usr/local/bin/bms . # bms: bang9ming9 solidity
+```
 
 example
 ```
 cd .....
-bsm init
-bsm compile --tidy (go mod tidy)
-bsm setsolc --version=0.8.25 --remappings=@openzeppelin/=...../node_modules/@openzeppelin,@other=...../
+bms init
+bms compile --tidy (go mod tidy)
 ```
 
 require

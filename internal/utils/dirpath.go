@@ -9,6 +9,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	separator string = string(os.PathSeparator)
+)
+
 var (
 	rootpath       string = ""
 	contract       string = ""
@@ -77,6 +81,28 @@ func ReadRemappings() []string {
 	if err != nil {
 		return nil
 	}
+	contractsDir := GetContractDir()
 
-	return strings.Split(string(bytes), "\n")
+	remappings := make([]string, 0)
+	for _, remapping := range strings.Split(string(bytes), "\n") {
+		remapping = strings.TrimSpace(remapping)
+
+		split := strings.Split(remapping, "=")
+		if len(split) != 2 {
+			continue
+		}
+		if !filepath.IsAbs(split[1]) {
+			split[1] = filepath.Join(contractsDir, split[1])
+		}
+		split[0], split[1] = withSeparatorSuffix(split[0]), withSeparatorSuffix(split[1])
+		remappings = append(remappings, strings.Join(split, "="))
+	}
+	return remappings
+}
+
+func withSeparatorSuffix(s string) string {
+	if !strings.HasSuffix(s, separator) {
+		s += separator
+	}
+	return s
 }
