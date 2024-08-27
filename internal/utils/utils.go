@@ -11,6 +11,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	AppVersion      = "v0.2.1"
+	EthereumVersion = "v1.13.12"
+)
+
 func InstallSolc(version string) error {
 	var err error
 	if version, err = ToSolcVersion(version); err != nil {

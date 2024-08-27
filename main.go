@@ -6,6 +6,7 @@ import (
 
 	"github.com/bang9ming9/go-hardhat/internal/compile"
 	initCommand "github.com/bang9ming9/go-hardhat/internal/init"
+	"github.com/bang9ming9/go-hardhat/internal/utils"
 	"github.com/urfave/cli/v2"
 )
 
@@ -14,7 +15,8 @@ var (
 )
 
 func init() {
-	app.Name = "GO-HARDHAT"
+	app.Name = "bms"
+	app.Version = utils.AppVersion
 	app.Copyright = "bang9ming9"
 	app.CommandNotFound = func(ctx *cli.Context, s string) {
 		cli.ShowAppHelp(ctx)

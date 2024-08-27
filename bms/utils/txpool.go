@@ -19,18 +19,18 @@ func NewTxPool(client bind.DeployBackend) *TxPool {
 	return &TxPool{client: client, txs: make([]*types.Transaction, 0)}
 }
 
-func (txs *TxPool) Append(tx *types.Transaction) *types.Transaction {
-	if tx != nil {
-		txs.txs = append(txs.txs, tx)
-	}
-	return tx
-}
-
 func (txs *TxPool) Exec(tx *types.Transaction, err error) error {
 	if tx != nil {
 		txs.txs = append(txs.txs, tx)
 	}
 	return err
+}
+
+func (txs *TxPool) Append(tx *types.Transaction) *types.Transaction {
+	if tx != nil {
+		txs.txs = append(txs.txs, tx)
+	}
+	return tx
 }
 
 func (txs *TxPool) AllReceiptStatusSuccessful(ctx context.Context) error {

@@ -43,7 +43,7 @@ func GetOwner(t *testing.T) *bind.TransactOpts {
 	require.NoError(t, err)
 	pk, err := wallet.PrivateKey(account)
 	require.NoError(t, err)
-	opts, err := bind.NewKeyedTransactorWithChainID(pk, ChainID())
+	opts, err := bind.NewKeyedTransactorWithChainID(pk, ChainID)
 	require.NoError(t, err)
 	return opts
 }
@@ -54,7 +54,7 @@ func GetEOA(t *testing.T) *bind.TransactOpts {
 	require.NoError(t, err)
 	pk, err := wallet.PrivateKey(account)
 	require.NoError(t, err)
-	opts, err := bind.NewKeyedTransactorWithChainID(pk, ChainID())
+	opts, err := bind.NewKeyedTransactorWithChainID(pk, ChainID)
 	require.NoError(t, err)
 	return opts
 }

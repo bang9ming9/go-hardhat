@@ -17,16 +17,8 @@ import (
 var Command *cli.Command = &cli.Command{
 	Name: "init",
 	Action: func(ctx *cli.Context) error {
-		rootpath, err := utils.GetRootPath()
-		if err != nil {
-			return err
-		}
-
-		// go.mod 이 없다면 생성 한다.
-		if rootpath == "" {
-			if err := initGoModule(ctx.Args().First()); err != nil {
-				return err
-			}
+		if err := initGoModule(ctx.Args().First()); err != nil {
+			return errors.Wrap(err, "fail to init project")
 		}
 
 		if err := utils.SetDirPath(); err != nil {
@@ -38,7 +30,7 @@ var Command *cli.Command = &cli.Command{
 			return err
 		}
 
-		return nil
+		return exec.Command("go", "mod", "tidy").Run()
 	},
 	ArgsUsage: "<module-path>",
 }
@@ -60,7 +52,18 @@ func initGoModule(modulepath string) error {
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("go mod init %s", modulepath))
 	}
-	return err
+
+	bmspath := fmt.Sprintf("github.com/bang9ming9/go-hardhat@%s", utils.AppVersion)
+	if err := exec.Command("go", "get", bmspath).Run(); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("go get %s", modulepath))
+	}
+
+	ethereumpath := fmt.Sprintf("github.com/ethereum/go-ethereum@%s", utils.EthereumVersion)
+	if err := exec.Command("go", "get", ethereumpath).Run(); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("go get %s", modulepath))
+	}
+
+	return nil
 }
 
 func makeDefaultFS() error {
@@ -104,6 +107,26 @@ func makeDefaultFS() error {
 	]
 }`), 0644); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("create %s", prettierrc))
+		}
+	}
+
+	basetest := filepath.Join(testDir, "base.go")
+	if _, err := os.Stat(basetest); errors.Is(err, os.ErrNotExist) {
+		if err := os.WriteFile(basetest, []byte(`package test
+
+import (
+	"github.com/bang9ming9/go-hardhat/bms"
+	butils "github.com/bang9ming9/go-hardhat/bms/utils"
+	"github.com/ethereum/go-ethereum/common"
+)
+
+var (
+	_ = common.Big1
+	_ = bms.ChainID
+	_ = butils.ErrEventNotFind
+)
+`), 0644); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("create %s", basetest))
 		}
 	}
 

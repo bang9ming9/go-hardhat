@@ -18,9 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-func ChainID() *big.Int {
-	return params.AllDevChainProtocolChanges.ChainID
-}
+var ChainID *big.Int = params.AllDevChainProtocolChanges.ChainID
 
 type Backend struct {
 	simulated.Backend

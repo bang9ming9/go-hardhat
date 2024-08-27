@@ -16,24 +16,26 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	MERGE_FLAG_NAME   string = "merge"
+	EXCLUDE_FLAG_NAME string = "exclude"
+	FILTER_FLAG_NAME  string = "filter"
+)
+
 var Command *cli.Command = &cli.Command{
 	Name:      "compile",
 	ArgsUsage: "<solc-version>",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
-			Name:  "tidy",
-			Value: false,
-			Usage: "execute with go mod tidy",
-		}, &cli.BoolFlag{
-			Name:  "merge",
+			Name:  MERGE_FLAG_NAME,
 			Value: false,
 			Usage: "write all bind codes to abis/bind.go",
 		}, &cli.StringFlag{
-			Name:    "exclude",
+			Name:    EXCLUDE_FLAG_NAME,
 			Aliases: []string{"e", "exc"},
 			Usage:   "Comma separated path to exclude from compile",
 		}, &cli.StringFlag{
-			Name:    "filter",
+			Name:    FILTER_FLAG_NAME,
 			Aliases: []string{"f"},
 			Usage:   "Comma separated types to filter from binding",
 		},
@@ -54,14 +56,17 @@ var Command *cli.Command = &cli.Command{
 
 		// 2. solidity 컴파일 실행
 		// 2-1. 컴파일 제외할 디렉토리 확인
-		excludes := make([]string, 0)
-		for _, path := range strings.Split(ctx.String("exclude"), ",") {
-			if filepath.IsAbs(path) {
-				excludes = append(excludes, path)
-			} else if abs, err := filepath.Abs(path); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("%s is invalid filepath", path))
-			} else {
-				excludes = append(excludes, abs)
+		var excludes []string
+		if ctx.IsSet(EXCLUDE_FLAG_NAME) {
+			excludes = make([]string, 0)
+			for _, path := range strings.Split(ctx.String(EXCLUDE_FLAG_NAME), ",") {
+				if filepath.IsAbs(path) {
+					excludes = append(excludes, path)
+				} else if abs, err := filepath.Abs(path); err != nil {
+					return errors.Wrap(err, fmt.Sprintf("%s is invalid filepath", path))
+				} else {
+					excludes = append(excludes, abs)
+				}
 			}
 		}
 		// 2-2 컴파일 할 파일 목록 가져오기
@@ -76,9 +81,9 @@ var Command *cli.Command = &cli.Command{
 		}
 
 		// 3. filter 적용
-		if ctx.IsSet("filter") {
+		if ctx.IsSet(FILTER_FLAG_NAME) {
 			filters := make(map[string]struct{})
-			for _, f := range strings.Split(ctx.String("filter"), ",") {
+			for _, f := range strings.Split(ctx.String(FILTER_FLAG_NAME), ",") {
 				filters[f] = struct{}{}
 			}
 			for name := range contracts {
@@ -96,7 +101,7 @@ var Command *cli.Command = &cli.Command{
 			}
 		}
 
-		if ctx.Bool("merge") {
+		if ctx.Bool(MERGE_FLAG_NAME) {
 			if err := abigenMerge(contracts); err != nil {
 				return errors.Wrap(err, "abigenMerge")
 			}
@@ -107,12 +112,7 @@ var Command *cli.Command = &cli.Command{
 				}
 			}
 		}
-
-		if ctx.Bool("tidy") {
-			return exec.Command("go", "mod", "tidy").Run()
-		} else {
-			return nil
-		}
+		return nil
 	},
 }
 
