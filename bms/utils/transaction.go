@@ -13,6 +13,7 @@ import (
 
 type Backend interface {
 	bind.ContractBackend
+	bind.DeployBackend
 }
 
 func CreateDynamicTx(backend Backend, opts *bind.TransactOpts, to *common.Address, input []byte) (*types.Transaction, error) {
@@ -82,9 +83,7 @@ func ensureContext(ctx context.Context) context.Context {
 	return ctx
 }
 
-func estimateGasLimit(backend interface {
-	EstimateGas(ctx context.Context, call ethereum.CallMsg) (uint64, error)
-}, opts *bind.TransactOpts, to *common.Address, input []byte, gasPrice, gasTipCap, gasFeeCap, value *big.Int) (uint64, error) {
+func estimateGasLimit(backend Backend, opts *bind.TransactOpts, to *common.Address, input []byte, gasPrice, gasTipCap, gasFeeCap, value *big.Int) (uint64, error) {
 	msg := ethereum.CallMsg{
 		From:      opts.From,
 		To:        to,
@@ -97,9 +96,7 @@ func estimateGasLimit(backend interface {
 	return backend.EstimateGas(ensureContext(opts.Context), msg)
 }
 
-func getNonce(backend interface {
-	PendingNonceAt(ctx context.Context, account common.Address) (uint64, error)
-}, opts *bind.TransactOpts) (uint64, error) {
+func getNonce(backend Backend, opts *bind.TransactOpts) (uint64, error) {
 	if opts.Nonce == nil {
 		return backend.PendingNonceAt(ensureContext(opts.Context), opts.From)
 	} else {

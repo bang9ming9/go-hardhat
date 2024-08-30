@@ -3,6 +3,7 @@ package bmsutils
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,12 +12,26 @@ import (
 )
 
 type TxPool struct {
-	client bind.DeployBackend
-	txs    []*types.Transaction
+	backend bind.DeployBackend
+	txs     []*types.Transaction
+	timeout time.Duration
 }
 
-func NewTxPool(client bind.DeployBackend) *TxPool {
-	return &TxPool{client: client, txs: make([]*types.Transaction, 0)}
+func NewTxPool(backend bind.DeployBackend) *TxPool {
+	return &TxPool{backend: backend, txs: make([]*types.Transaction, 0), timeout: 15e9}
+}
+
+func (txs *TxPool) SetTimeout(timeout time.Duration) *TxPool {
+	txs.timeout = timeout
+	return txs
+}
+
+func (txs *TxPool) GetBackend(timeout time.Duration) bind.DeployBackend {
+	return txs.backend
+}
+
+func (txs *TxPool) GetTxSize() int {
+	return len(txs.txs)
 }
 
 func (txs *TxPool) Exec(tx *types.Transaction, err error) error {
@@ -54,8 +69,8 @@ func (txs *TxPool) WaitMined(ctx context.Context) ([]*types.Receipt, error) {
 	receipts := make([]*types.Receipt, 0)
 	length := len(txs.txs)
 	for i := 0; i < length; i++ {
-		ctx, cancel := context.WithTimeout(ensureContext(ctx), 10e9)
-		receipt, err := bind.WaitMined(ctx, txs.client, txs.txs[i])
+		ctx, cancel := context.WithTimeout(ensureContext(ctx), txs.timeout)
+		receipt, err := bind.WaitMined(ctx, txs.backend, txs.txs[i])
 		cancel()
 
 		if err != nil {
