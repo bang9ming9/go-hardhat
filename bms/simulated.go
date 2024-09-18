@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"testing"
 
-	bmsutils "github.com/bang9ming9/go-hardhat/bms/utils"
+	"github.com/bang9ming9/go-hardhat/bms/bmsutils"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,7 +31,7 @@ func NewBacked(t *testing.T) *Backend {
 	ethconfig.Defaults.Miner.GasPrice.SetBytes([]byte{})
 	defer ethconfig.Defaults.Miner.GasPrice.SetBytes(minerGasPrice.Bytes())
 
-	owner := GetOwner(t)
+	owner := GetTOwner(t)
 	ethconfig.Defaults.Miner.GasPrice = common.Big0
 	backend := simulated.NewBackend(
 		core.GenesisAlloc{

@@ -2,7 +2,6 @@ package bmsutils
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -20,14 +19,26 @@ func DeployContract[T any](address common.Address, tx *types.Transaction, contra
 	return &Contract[T]{address: address, funcs: contract}, tx, nil
 }
 
-func NewContract[T any](address common.Address, backend bind.ContractBackend) *Contract[T] {
+func NewContract[T any](contract *T, err error) (*Contract[T], error) {
+	if err != nil {
+		return nil, err
+	}
 	funcs := new(T)
-	return &Contract[T]{address: address, funcs: funcs}
+	return &Contract[T]{address: common.Address{0}, funcs: funcs}, nil
+}
+
+func (contract *Contract[T]) SetAddress(address common.Address) *Contract[T] {
+	if contract.address == (common.Address{0}) {
+		contract.address = address
+	}
+	return contract
 }
 
 func (contract *Contract[T]) SetABI(abi *abi.ABI) *Contract[T] {
-	EnrollErrors(abi)
-	contract.abi = abi
+	if contract.abi == nil {
+		EnrollErrors(abi)
+		contract.abi = abi
+	}
 	return contract
 }
 

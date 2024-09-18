@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bang9ming9/go-hardhat/bms"
-	bmsutils "github.com/bang9ming9/go-hardhat/bms/utils"
+	"github.com/bang9ming9/go-hardhat/bms/bmsutils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,7 @@ func TestNewBackend(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(backend.Owner.From, "balance", balance)
 
-	eoa := bms.GetEOA(t)
+	eoa := bms.GetTEoa(t)
 	balance, err = backend.BalanceAt(ctx, eoa.From, nil)
 	require.NoError(t, err)
 	t.Log(eoa.From, "balance", balance)
